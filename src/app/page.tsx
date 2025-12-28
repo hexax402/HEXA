@@ -1,6 +1,11 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
+
+/* -------------------------------------------------------------------------- */
+/*                                  Helpers                                   */
+/* -------------------------------------------------------------------------- */
 
 type DemoState = "READY" | "PAYMENT_REQUIRED" | "UNLOCKED";
 type Tab = "terminal" | "routes" | "depth" | "pipeline" | "docs";
@@ -12,7 +17,7 @@ function cn(...xs: Array<string | false | null | undefined>) {
 /** ---------- Inline icons (no deps) ---------- */
 function Icon({
   d,
-  className = "text-zinc-700",
+  className = "text-zinc-300",
   size = 16,
 }: {
   d: string;
@@ -27,7 +32,8 @@ function Icon({
 }
 
 const I = {
-  lock: "M17 9h-1V7a4 4 0 0 0-8 0v2H7a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2Zm-7-2a2 2 0 1 1 4 0v2h-4V7Zm3 10.73V19h-2v-1.27a2 2 0 1 1 2 0Z",
+  lock:
+    "M17 9h-1V7a4 4 0 0 0-8 0v2H7a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2Zm-7-2a2 2 0 1 1 4 0v2h-4V7Zm3 10.73V19h-2v-1.27a2 2 0 1 1 2 0Z",
   terminal:
     "M3 5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5Zm4.2 4.4L10 12l-2.8 2.6 1.4 1.4L13 12 8.6 8 7.2 9.4ZM13 16h5v-2h-5v2Z",
   search:
@@ -35,6 +41,10 @@ const I = {
   arrow:
     "M14 3h7v7h-2V6.41l-9.29 9.3-1.42-1.42 9.3-9.29H14V3ZM5 5h6v2H7v10h10v-4h2v6H5V5Z",
 };
+
+/* -------------------------------------------------------------------------- */
+/*                                  UI bits                                   */
+/* -------------------------------------------------------------------------- */
 
 function Pill({
   tone = "neutral",
@@ -45,27 +55,27 @@ function Pill({
 }) {
   const cls =
     tone === "red"
-      ? "border-red-500/25 bg-red-50 text-red-700"
+      ? "border-red-500/35 bg-red-500/10 text-red-200"
       : tone === "green"
-      ? "border-emerald-500/25 bg-emerald-50 text-emerald-700"
+      ? "border-emerald-500/35 bg-emerald-500/10 text-emerald-200"
       : tone === "amber"
-      ? "border-amber-500/25 bg-amber-50 text-amber-700"
-      : "border-zinc-200 bg-white text-zinc-700";
+      ? "border-amber-500/35 bg-amber-500/10 text-amber-200"
+      : "border-white/10 bg-white/5 text-zinc-200";
   const dot =
     tone === "red"
-      ? "bg-red-500"
+      ? "bg-red-400"
       : tone === "green"
-      ? "bg-emerald-500"
+      ? "bg-emerald-400"
       : tone === "amber"
-      ? "bg-amber-500"
+      ? "bg-amber-400"
       : "bg-zinc-400";
   return (
     <span
-      className={cn("inline-flex items-center gap-2 rounded-md border px-2.5 py-1 text-[11px] font-semibold")}
-      style={{ letterSpacing: "0.12em" }}
+      className={cn("inline-flex items-center gap-2 rounded-md border px-2.5 py-1 text-[11px] font-extrabold", cls)}
+      style={{ letterSpacing: "0.14em" }}
     >
       <span className={cn("h-1.5 w-1.5 rounded-full", dot)} />
-      <span className={cls}>{children}</span>
+      {children}
     </span>
   );
 }
@@ -84,18 +94,19 @@ function Panel({
   return (
     <div
       className={cn(
-        "relative overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-[0_18px_70px_rgba(0,0,0,0.10)]",
-        "before:pointer-events-none before:absolute before:inset-0 before:bg-[radial-gradient(circle_at_25%_0%,rgba(239,68,68,0.12),transparent_55%)]",
+        "relative overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/70 backdrop-blur",
+        "shadow-[0_18px_90px_rgba(0,0,0,0.55)]",
+        "before:pointer-events-none before:absolute before:inset-0 before:bg-[radial-gradient(circle_at_25%_0%,rgba(239,68,68,0.20),transparent_55%)]",
         className
       )}
     >
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-red-500/70 to-transparent" />
-      <div className="flex items-center justify-between border-b border-zinc-200 px-4 py-3">
+      <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
         <div
-          className="flex items-center gap-2 text-[11px] font-extrabold text-zinc-900"
+          className="flex items-center gap-2 text-[11px] font-extrabold text-zinc-100"
           style={{ letterSpacing: "0.22em" }}
         >
-          <span className="inline-block h-2 w-2 rounded-sm bg-red-600 shadow-[0_0_18px_rgba(239,68,68,0.45)]" />
+          <span className="inline-block h-2 w-2 rounded-sm bg-red-500 shadow-[0_0_18px_rgba(239,68,68,0.55)]" />
           {title}
         </div>
         {right}
@@ -109,7 +120,8 @@ function DarkWell({ children, className = "" }: { children: React.ReactNode; cla
   return (
     <div
       className={cn(
-        "rounded-2xl border border-zinc-900/10 bg-zinc-950 text-zinc-100 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.03)]",
+        "rounded-2xl border border-white/10 bg-black text-zinc-100",
+        "shadow-[inset_0_0_0_1px_rgba(255,255,255,0.03)]",
         className
       )}
     >
@@ -120,28 +132,30 @@ function DarkWell({ children, className = "" }: { children: React.ReactNode; cla
 
 function Kv({ k, v, sub }: { k: string; v: string; sub?: string }) {
   return (
-    <div className="rounded-xl border border-zinc-200 bg-white px-3 py-2">
-      <div className="text-[10px] font-semibold text-zinc-500" style={{ letterSpacing: "0.12em" }}>
+    <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2">
+      <div className="text-[10px] font-semibold text-zinc-400" style={{ letterSpacing: "0.12em" }}>
         {k}
       </div>
-      <div className="mt-0.5 text-sm font-extrabold text-zinc-900">{v}</div>
-      {sub ? <div className="mt-0.5 text-[10px] text-zinc-500">{sub}</div> : null}
+      <div className="mt-0.5 text-sm font-extrabold text-zinc-100">{v}</div>
+      {sub ? <div className="mt-0.5 text-[10px] text-zinc-400">{sub}</div> : null}
     </div>
   );
 }
 
 function MiniStat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-white/10 bg-black/50 px-3 py-2">
+    <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2">
       <div className="text-[10px] font-semibold text-zinc-400" style={{ letterSpacing: "0.12em" }}>
         {label}
       </div>
-      <div className="text-sm font-extrabold text-white">{value}</div>
+      <div className="text-sm font-extrabold text-zinc-100">{value}</div>
     </div>
   );
 }
 
-/** ---------------- TradingView-ish charts ---------------- */
+/* -------------------------------------------------------------------------- */
+/*                                   Charts                                   */
+/* -------------------------------------------------------------------------- */
 
 type Candle = { t: number; o: number; h: number; l: number; c: number };
 
@@ -166,7 +180,7 @@ function Sparkline({ values, height = 54 }: { values: number[]; height?: number 
     <svg width="100%" viewBox={`0 0 ${w} ${h}`} className="block">
       <defs>
         <linearGradient id="sp" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="rgba(239,68,68,0.45)" />
+          <stop offset="0" stopColor="rgba(239,68,68,0.65)" />
           <stop offset="1" stopColor="rgba(239,68,68,0.02)" />
         </linearGradient>
       </defs>
@@ -195,7 +209,7 @@ function Candles({ candles, height = 180 }: { candles: Candle[]; height?: number
   return (
     <svg width="100%" viewBox={`0 0 ${w} ${h}`} className="block">
       <rect x="0" y="0" width={w} height={h} fill="rgba(0,0,0,0.55)" rx="14" />
-      <g opacity="0.25">
+      <g opacity="0.22">
         {Array.from({ length: 5 }).map((_, i) => (
           <line
             key={i}
@@ -248,7 +262,9 @@ function Candles({ candles, height = 180 }: { candles: Candle[]; height?: number
   );
 }
 
-/** ---------------- Data types + fetch helpers ---------------- */
+/* -------------------------------------------------------------------------- */
+/*                            Data types + fetchers                           */
+/* -------------------------------------------------------------------------- */
 
 type Telemetry = { latencyMs: number; rps: number; unlocks: number; revenueK: number; intensity: number; shock: number };
 type Fill = { id: string; t: string; sym: string; side: "BUY" | "SELL"; px: number; qty: number; route: string };
@@ -271,6 +287,10 @@ async function jpost<T>(url: string, body: any): Promise<T> {
   return r.json();
 }
 
+/* -------------------------------------------------------------------------- */
+/*                                    Page                                    */
+/* -------------------------------------------------------------------------- */
+
 export default function HomePage() {
   const [tab, setTab] = useState<Tab>("terminal");
 
@@ -283,11 +303,10 @@ export default function HomePage() {
   const [alerts, setAlerts] = useState<Array<{ id: string; sev: "LOW" | "MED" | "HIGH"; msg: string; at: string }>>([]);
   const [series, setSeries] = useState<Series | null>(null);
 
-  // seed chart once
+  // seed chart once (fallback if /api/series not ready)
   useEffect(() => {
     setSeries((s) => {
       if (s?.candles?.length) return s;
-
       const candles = Array.from({ length: 60 }).map((_, i) => {
         const base = 180;
         const t = Date.now() - (60 - i) * 60_000;
@@ -295,39 +314,23 @@ export default function HomePage() {
         const c = o + (Math.random() - 0.5) * 3;
         const h = Math.max(o, c) + Math.random() * 2;
         const l = Math.min(o, c) - Math.random() * 2;
-
         return { t, o, h, l, c };
       });
-
       return { symbol: "SOL", candles, intensity: [], shock: [] };
     });
   }, []);
 
-  // animate candles
+  // animate candles (fallback “alive” but not marketed as demo)
   useEffect(() => {
     const id = setInterval(() => {
       setSeries((s) => {
         if (!s?.candles?.length) return s;
-
         const last = s.candles[s.candles.length - 1];
         const o = last.c;
         const c = o + (Math.random() - 0.5) * 2;
         const h = Math.max(o, c) + Math.random();
         const l = Math.min(o, c) - Math.random();
-
-        return {
-          ...s,
-          candles: [
-            ...s.candles.slice(-59),
-            {
-              t: Date.now(),
-              o,
-              h,
-              l,
-              c,
-            },
-          ],
-        };
+        return { ...s, candles: [...s.candles.slice(-59), { t: Date.now(), o, h, l, c }] };
       });
     }, 1200);
 
@@ -405,13 +408,9 @@ export default function HomePage() {
 
   const oneLiner = useMemo(
     () =>
-      `HEXA — Paywalled APIs with on-chain enforcement\n\n• Deterministic 402 → Pay → Unlock\n• Receipt verification + TTL sessions\n• Edge enforcement + audit-friendly logs\n• Operator-grade console UI`,
+      `HEXA — Solana x402 paywalled APIs with receipt-based enforcement\n\n• Deterministic 402 → Pay → Unlock\n• Receipt verification + TTL sessions\n• Audit-grade logs + operator console\n• Edge-ready policy enforcement surface`,
     []
   );
-
-  // ✅ UPDATE THESE LINKS
-  const X_URL = "https://x.com/Hexax402";
-  const GITHUB_URL = "https://github.com/Hexax402/HEXA"; // <-- change to your public repo once you create it
 
   async function copyText() {
     try {
@@ -427,7 +426,6 @@ export default function HomePage() {
     setCmd("");
     try {
       await jpost("/api/command", { cmd: line });
-      // polling will reflect changes
     } catch (e: any) {
       console.error(e);
     }
@@ -437,10 +435,10 @@ export default function HomePage() {
   const grossNotional = useMemo(() => positions.reduce((a, p) => a + Math.abs(p.qty * p.mark), 0), [positions]);
 
   return (
-    <main className="min-h-screen bg-zinc-50 text-zinc-900">
+    <main className="min-h-screen bg-black text-zinc-100">
       <style jsx global>{`
         :root {
-          color-scheme: light;
+          color-scheme: dark;
         }
         @keyframes cursorBlink {
           0%,
@@ -457,81 +455,82 @@ export default function HomePage() {
       {/* Background */}
       <div className="pointer-events-none fixed inset-0">
         <div
-          className="absolute inset-0 opacity-[0.35]"
+          className="absolute inset-0 opacity-[0.18]"
           style={{
             backgroundImage:
-              "linear-gradient(to right, rgba(0,0,0,0.04) 1px, transparent 1px), linear-gradient(to bottom, rgba(0,0,0,0.04) 1px, transparent 1px)",
+              "linear-gradient(to right, rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.05) 1px, transparent 1px)",
             backgroundSize: "34px 34px",
           }}
         />
         <div
-          className="absolute inset-0 opacity-[0.18]"
+          className="absolute inset-0 opacity-[0.20]"
           style={{
             backgroundImage:
-              "radial-gradient(circle at 12% 20%, rgba(239,68,68,0.30) 0, transparent 35%), radial-gradient(circle at 78% 22%, rgba(239,68,68,0.22) 0, transparent 40%), radial-gradient(circle at 50% 70%, rgba(0,0,0,0.10) 0, transparent 46%)",
+              "radial-gradient(circle at 12% 18%, rgba(239,68,68,0.25) 0, transparent 42%), radial-gradient(circle at 78% 20%, rgba(239,68,68,0.18) 0, transparent 46%), radial-gradient(circle at 45% 78%, rgba(255,255,255,0.06) 0, transparent 52%)",
           }}
         />
-        <div className="absolute -top-64 left-1/2 h-[520px] w-[980px] -translate-x-1/2 rounded-full bg-red-500/20 blur-[120px]" />
-        <div className="absolute top-[38%] right-[-260px] h-[560px] w-[560px] rounded-full bg-red-500/12 blur-[150px]" />
-        <div className="absolute bottom-[-260px] left-[-260px] h-[560px] w-[560px] rounded-full bg-zinc-900/10 blur-[170px]" />
-        <div className="absolute inset-0 bg-gradient-to-b from-white/10 via-white/55 to-white" />
+        <div className="absolute -top-64 left-1/2 h-[520px] w-[980px] -translate-x-1/2 rounded-full bg-red-500/18 blur-[140px]" />
+        <div className="absolute top-[40%] right-[-260px] h-[560px] w-[560px] rounded-full bg-red-500/12 blur-[160px]" />
+        <div className="absolute bottom-[-260px] left-[-260px] h-[560px] w-[560px] rounded-full bg-white/6 blur-[190px]" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/60 to-black" />
       </div>
 
       <div className="relative mx-auto max-w-[1750px] px-5 pb-24 pt-6">
         {/* Top bar */}
-        <div className="relative flex items-center justify-between rounded-2xl border border-zinc-200 bg-white px-4 py-3 shadow-[0_18px_70px_rgba(0,0,0,0.10)]">
+        <div className="relative flex items-center justify-between rounded-2xl border border-white/10 bg-zinc-950/70 px-4 py-3 shadow-[0_18px_80px_rgba(0,0,0,0.55)] backdrop-blur">
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 rounded-2xl border border-zinc-200 bg-white px-3 py-2">
-              <Icon d={I.lock} className="text-red-600" />
+            <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-3 py-2">
+              <Icon d={I.lock} className="text-red-400" />
               <div className="leading-tight">
-                <div className="text-[10px] font-semibold text-zinc-500" style={{ letterSpacing: "0.12em" }}>
+                <div className="text-[10px] font-semibold text-zinc-400" style={{ letterSpacing: "0.12em" }}>
                   SOLANA x402 ENFORCEMENT
                 </div>
-                <div className="text-xs font-extrabold text-zinc-900" style={{ letterSpacing: "0.18em" }}>
+                <div className="text-xs font-extrabold text-zinc-100" style={{ letterSpacing: "0.18em" }}>
                   HEXA
                 </div>
               </div>
             </div>
 
             <div className="hidden items-center gap-2 md:flex">
-              <Pill tone="red">EDGE POLICY: ACTIVE</Pill>
+              <Pill tone="red">POLICY: ACTIVE</Pill>
               <Pill tone={statusTone}>STATE: {status?.statusText ?? "LOADING"}</Pill>
-              <span className="mx-2 h-5 w-px bg-zinc-200" />
-              <div className="flex items-center gap-4 text-[11px] font-semibold text-zinc-700" style={{ letterSpacing: "0.12em" }}>
+              <span className="mx-2 h-5 w-px bg-white/10" />
+              <div className="flex items-center gap-4 text-[11px] font-semibold text-zinc-300" style={{ letterSpacing: "0.12em" }}>
                 <span>
-                  LAT <span className="font-extrabold text-zinc-900">{tele?.latencyMs ?? "—"}ms</span>
+                  LAT <span className="font-extrabold text-zinc-100">{tele?.latencyMs ?? "—"}ms</span>
                 </span>
                 <span>
-                  RPS <span className="font-extrabold text-zinc-900">{tele?.rps ?? "—"}</span>
+                  RPS <span className="font-extrabold text-zinc-100">{tele?.rps ?? "—"}</span>
                 </span>
                 <span>
-                  UNLOCKS <span className="font-extrabold text-zinc-900">{tele?.unlocks ?? "—"}</span>
+                  UNLOCKS <span className="font-extrabold text-zinc-100">{tele?.unlocks ?? "—"}</span>
                 </span>
                 <span>
-                  REV <span className="font-extrabold text-zinc-900">${tele?.revenueK ?? "—"}k</span>
+                  REV <span className="font-extrabold text-zinc-100">${tele?.revenueK ?? "—"}k</span>
                 </span>
               </div>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
+            <WalletMultiButton />
             <a
-              href={X_URL}
+              href="https://x.com/Hexax402"
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs font-extrabold text-zinc-900 hover:bg-zinc-50"
+              className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-extrabold text-zinc-100 hover:bg-white/10"
               style={{ letterSpacing: "0.12em" }}
             >
-              X <Icon d={I.arrow} className="text-zinc-700" />
+              X <Icon d={I.arrow} className="text-zinc-300" />
             </a>
             <a
-              href={GITHUB_URL}
+              href="https://github.com/hexax402/HEXA"
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs font-extrabold text-zinc-900 hover:bg-zinc-50"
+              className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-extrabold text-zinc-100 hover:bg-white/10"
               style={{ letterSpacing: "0.12em" }}
             >
-              GITHUB <Icon d={I.arrow} className="text-zinc-700" />
+              GITHUB <Icon d={I.arrow} className="text-zinc-300" />
             </a>
             <button
               onClick={copyText}
@@ -564,8 +563,8 @@ export default function HomePage() {
                     className={cn(
                       "w-full rounded-2xl border px-3 py-3 text-left text-xs font-extrabold",
                       tab === k
-                        ? "border-red-200 bg-red-50 text-red-800"
-                        : "border-zinc-200 bg-white text-zinc-900 hover:bg-zinc-50"
+                        ? "border-red-500/35 bg-red-500/10 text-red-200"
+                        : "border-white/10 bg-white/5 text-zinc-100 hover:bg-white/10"
                     )}
                     style={{ letterSpacing: "0.16em" }}
                   >
@@ -576,13 +575,13 @@ export default function HomePage() {
 
               <div className="mt-4 grid grid-cols-2 gap-2">
                 <Kv k="PRIMARY ROUTE" v={status?.route ?? "/api/premium-data"} sub="enforced" />
-                <Kv k="PRICE" v={status?.price ?? "0.01 SOL"} sub="per unlock window" />
-                <Kv k="INTENT TTL" v={status?.intentTtl ?? "90s"} sub="quote window" />
-                <Kv k="SESSION TTL" v={status?.sessionTtl ?? "10m"} sub="unlock window" />
+                <Kv k="PRICE" v={status?.price ?? "0.01 SOL"} sub="per session window" />
+                <Kv k="INTENT TTL" v={status?.intentTtl ?? "90s"} sub="quote validity" />
+                <Kv k="SESSION TTL" v={status?.sessionTtl ?? "10m"} sub="access window" />
               </div>
 
-              <div className="mt-4 rounded-2xl border border-zinc-200 bg-white p-3">
-                <div className="text-[11px] font-extrabold text-zinc-900" style={{ letterSpacing: "0.18em" }}>
+              <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-3">
+                <div className="text-[11px] font-extrabold text-zinc-100" style={{ letterSpacing: "0.18em" }}>
                   RISK SNAPSHOT
                 </div>
                 <div className="mt-3 grid grid-cols-2 gap-2">
@@ -592,7 +591,7 @@ export default function HomePage() {
                 <div className="mt-3 flex gap-2">
                   <button
                     onClick={() => runCmd("risk")}
-                    className="flex-1 rounded-2xl border border-zinc-200 bg-white px-3 py-2 text-xs font-extrabold text-zinc-900 hover:bg-zinc-50"
+                    className="flex-1 rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-extrabold text-zinc-100 hover:bg-white/10"
                     style={{ letterSpacing: "0.12em" }}
                   >
                     CHECK RISK
@@ -622,20 +621,20 @@ export default function HomePage() {
             >
               <div className="grid gap-5 md:grid-cols-2">
                 <div>
-                  <div className="flex items-center gap-2 text-xs font-semibold text-zinc-600">
-                    <Icon d={I.terminal} className="text-red-600" />
-                    Production enforcement surface + operator-grade visibility
+                  <div className="flex items-center gap-2 text-xs font-semibold text-zinc-300">
+                    <Icon d={I.terminal} className="text-red-400" />
+                    Policy enforcement surface + operator-grade visibility
                   </div>
 
                   <h1 className="mt-3 text-4xl font-extrabold leading-[1.05] tracking-tight md:text-6xl">
-                    402 enforcement that ships
+                    x402 enforcement
                     <br />
-                    <span className="text-red-600">like a real terminal</span>.
+                    <span className="text-red-400">built like infra</span>.
                   </h1>
 
-                  <p className="mt-4 text-sm leading-6 text-zinc-700">
-                    Policy-driven access. Receipt verification. TTL unlock windows. Audit-friendly events. This UI is wired to a backend
-                    engine today — and the engine is designed to swap in your receipt verifier and Solana RPC without changing the UX.
+                  <p className="mt-4 text-sm leading-6 text-zinc-300">
+                    Policy-driven access. Receipt verification. TTL unlock windows. Audit-grade event streams.
+                    This UI is wired to live server endpoints — swap in real Solana receipt verification without changing the UX.
                   </p>
 
                   <div className="mt-5 flex flex-wrap gap-2">
@@ -648,14 +647,14 @@ export default function HomePage() {
                     </button>
                     <button
                       onClick={() => runCmd("tick")}
-                      className="rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-xs font-extrabold text-zinc-900 hover:bg-zinc-50"
+                      className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-xs font-extrabold text-zinc-100 hover:bg-white/10"
                       style={{ letterSpacing: "0.14em" }}
                     >
                       TICK
                     </button>
                     <button
                       onClick={() => setTab("pipeline")}
-                      className="rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-xs font-extrabold text-zinc-900 hover:bg-zinc-50"
+                      className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-xs font-extrabold text-zinc-100 hover:bg-white/10"
                       style={{ letterSpacing: "0.14em" }}
                     >
                       VIEW PIPELINE
@@ -663,23 +662,27 @@ export default function HomePage() {
                   </div>
 
                   <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4">
-                    <Kv k="PRODUCT" v="HEXA" sub="x402 enforcement" />
-                    <Kv k="CHAIN" v="SOLANA" sub="receipt verification" />
-                    <Kv k="EDGE" v="ENFORCED" sub="policy active" />
-                    <Kv k="SESSION" v="TTL" sub="unlock window" />
+                    <Kv k="PRODUCT" v="HEXA" sub="x402 paywalled APIs" />
+                    <Kv k="CHAIN" v="SOLANA" sub="settlement + receipts" />
+                    <Kv k="EDGE" v="ENFORCEMENT" sub="policy gates" />
+                    <Kv k="SESSION" v="TTL" sub="time-bound unlock" />
+                    <Kv k="ROUTE" v={status?.route ?? "/api/premium-data"} sub="primary" />
+                    <Kv k="PRICE" v={status?.price ?? "0.01 SOL"} sub="per window" />
+                    <Kv k="INTENT TTL" v={status?.intentTtl ?? "90s"} sub="quote validity" />
+                    <Kv k="SESSION TTL" v={status?.sessionTtl ?? "10m"} sub="access window" />
                   </div>
                 </div>
 
                 <div className="grid gap-3">
-                  <div className="rounded-2xl border border-zinc-200 bg-white p-4">
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                     <div className="flex items-center justify-between">
-                      <div className="text-[11px] font-extrabold text-zinc-900" style={{ letterSpacing: "0.22em" }}>
+                      <div className="text-[11px] font-extrabold text-zinc-100" style={{ letterSpacing: "0.22em" }}>
                         HEALTH
                       </div>
                       <Pill tone={statusTone}>{status?.statusText ?? "LOADING"}</Pill>
                     </div>
 
-                    <div className="mt-3 rounded-2xl border border-zinc-200 bg-zinc-950 p-3">
+                    <div className="mt-3 rounded-2xl border border-white/10 bg-black p-3">
                       <div className="grid grid-cols-4 gap-2">
                         <MiniStat label="LAT" value={`${tele?.latencyMs ?? "—"}ms`} />
                         <MiniStat label="RPS" value={`${tele?.rps ?? "—"}`} />
@@ -687,24 +690,23 @@ export default function HomePage() {
                         <MiniStat label="REV" value={`$${tele?.revenueK ?? "—"}k`} />
                       </div>
                       <div className="mt-3 text-[11px] font-semibold text-zinc-300">
-                        Depth intensity:{" "}
-                        <span className="font-extrabold text-white">{tele?.intensity?.toFixed(2) ?? "—"}</span> • Shock:{" "}
-                        <span className="font-extrabold text-white">{tele?.shock ?? "—"}</span>
+                        Depth intensity: <span className="font-extrabold text-zinc-100">{tele?.intensity?.toFixed(2) ?? "—"}</span>{" "}
+                        • Shock: <span className="font-extrabold text-zinc-100">{tele?.shock ?? "—"}</span>
                       </div>
                     </div>
                   </div>
 
-                  <div className="rounded-2xl border border-zinc-200 bg-white p-4">
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                     <div className="flex items-center justify-between">
-                      <div className="text-[11px] font-extrabold text-zinc-900" style={{ letterSpacing: "0.22em" }}>
+                      <div className="text-[11px] font-extrabold text-zinc-100" style={{ letterSpacing: "0.22em" }}>
                         POSITIONS SNAPSHOT
                       </div>
                       <Pill tone="neutral">{positions.length ? "LIVE" : "FLAT"}</Pill>
                     </div>
 
-                    <div className="mt-3 overflow-hidden rounded-2xl border border-zinc-200 bg-white">
+                    <div className="mt-3 overflow-hidden rounded-2xl border border-white/10 bg-black">
                       <div
-                        className="grid grid-cols-12 border-b border-zinc-200 bg-zinc-50 px-3 py-2 text-[11px] font-extrabold text-zinc-700"
+                        className="grid grid-cols-12 border-b border-white/10 bg-white/5 px-3 py-2 text-[11px] font-extrabold text-zinc-300"
                         style={{ letterSpacing: "0.12em" }}
                       >
                         <div className="col-span-3">SYM</div>
@@ -714,29 +716,29 @@ export default function HomePage() {
                       </div>
                       <div className="max-h-[220px] overflow-auto">
                         {positions.length === 0 ? (
-                          <div className="p-4 text-sm font-semibold text-zinc-600">No open positions.</div>
+                          <div className="p-4 text-sm font-semibold text-zinc-300">No open positions.</div>
                         ) : (
                           positions.map((p) => (
-                            <div key={p.sym} className="grid grid-cols-12 px-3 py-2 text-sm hover:bg-zinc-50">
+                            <div key={p.sym} className="grid grid-cols-12 px-3 py-2 text-sm hover:bg-white/5">
                               <div className="col-span-3 font-extrabold">{p.sym}</div>
                               <div className="col-span-3">
                                 <span
                                   className={cn(
                                     "rounded-xl border px-2 py-1 text-[11px] font-extrabold",
                                     p.side === "LONG"
-                                      ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-                                      : "border-red-200 bg-red-50 text-red-800"
+                                      ? "border-emerald-500/35 bg-emerald-500/10 text-emerald-200"
+                                      : "border-red-500/35 bg-red-500/10 text-red-200"
                                   )}
                                   style={{ letterSpacing: "0.10em" }}
                                 >
                                   {p.side}
                                 </span>
                               </div>
-                              <div className="col-span-3 text-zinc-700">{p.qty}</div>
+                              <div className="col-span-3 text-zinc-300">{p.qty}</div>
                               <div
                                 className={cn(
                                   "col-span-3 text-right font-extrabold",
-                                  p.uPnL >= 0 ? "text-emerald-700" : "text-red-700"
+                                  p.uPnL >= 0 ? "text-emerald-300" : "text-red-300"
                                 )}
                               >
                                 {p.uPnL >= 0 ? "+" : ""}
@@ -762,11 +764,11 @@ export default function HomePage() {
               {tab === "terminal" && (
                 <Panel title="LIVE LOGS" right={<Pill tone="neutral">AUDIT</Pill>}>
                   <DarkWell className="p-3 font-mono text-[11px] leading-5">
-                    <div className="text-zinc-400">event stream</div>
+                    <div className="text-zinc-500">event stream</div>
                     <div className="mt-2">
                       {logs.map((l, i) => (
                         <div key={i} className="flex gap-2">
-                          <span className="text-zinc-500">{String(i + 1).padStart(2, "0")}</span>
+                          <span className="text-zinc-600">{String(i + 1).padStart(2, "0")}</span>
                           <span className="text-zinc-200">{l}</span>
                         </div>
                       ))}
@@ -776,14 +778,14 @@ export default function HomePage() {
                   <div className="mt-3 flex gap-2">
                     <button
                       onClick={() => runCmd("probe")}
-                      className="flex-1 rounded-2xl border border-zinc-200 bg-white px-3 py-2 text-xs font-extrabold text-zinc-900 hover:bg-zinc-50"
+                      className="flex-1 rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-extrabold text-zinc-100 hover:bg-white/10"
                       style={{ letterSpacing: "0.12em" }}
                     >
                       RUN PROBE
                     </button>
                     <button
                       onClick={() => runCmd("clear logs")}
-                      className="rounded-2xl border border-zinc-200 bg-white px-3 py-2 text-xs font-extrabold text-zinc-900 hover:bg-zinc-50"
+                      className="rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-extrabold text-zinc-100 hover:bg-white/10"
                       style={{ letterSpacing: "0.12em" }}
                     >
                       CLEAR
@@ -794,9 +796,9 @@ export default function HomePage() {
 
               {tab === "routes" && (
                 <Panel title="ROUTES" right={<Pill tone="neutral">EDGE</Pill>}>
-                  <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white">
+                  <div className="overflow-hidden rounded-2xl border border-white/10 bg-black">
                     <div
-                      className="grid grid-cols-12 border-b border-zinc-200 bg-zinc-50 px-4 py-3 text-[11px] font-extrabold text-zinc-700"
+                      className="grid grid-cols-12 border-b border-white/10 bg-white/5 px-4 py-3 text-[11px] font-extrabold text-zinc-300"
                       style={{ letterSpacing: "0.12em" }}
                     >
                       <div className="col-span-5">ROUTE</div>
@@ -805,49 +807,59 @@ export default function HomePage() {
                       <div className="col-span-3 text-right">STATE</div>
                     </div>
                     {[
-                      {
-                        route: "/api/premium-data",
-                        method: "GET",
-                        price: status?.price ?? "0.01 SOL",
-                        st: status?.statusText ?? "READY",
-                      },
+                      { route: "/api/premium-data", method: "GET", price: status?.price ?? "0.01 SOL", st: status?.statusText ?? "READY" },
                       { route: "/api/alpha-feed", method: "GET", price: "0.02 SOL", st: "READY" },
                       { route: "/api/metrics", method: "POST", price: "0.03 SOL", st: "READY" },
                       { route: "/api/export", method: "GET", price: "0.05 SOL", st: "READY" },
                     ].map((r) => (
-                      <div key={r.route} className="grid grid-cols-12 px-4 py-3 text-sm text-zinc-900 hover:bg-zinc-50">
-                        <div className="col-span-5 font-mono text-[12px] font-extrabold text-zinc-900">{r.route}</div>
+                      <div key={r.route} className="grid grid-cols-12 px-4 py-3 text-sm text-zinc-100 hover:bg-white/5">
+                        <div className="col-span-5 font-mono text-[12px] font-extrabold text-zinc-100">{r.route}</div>
                         <div className="col-span-2">
                           <span
-                            className="rounded-xl border border-zinc-200 bg-white px-2 py-1 text-[11px] font-extrabold text-zinc-700"
+                            className="rounded-xl border border-white/10 bg-white/5 px-2 py-1 text-[11px] font-extrabold text-zinc-200"
                             style={{ letterSpacing: "0.12em" }}
                           >
                             {r.method}
                           </span>
                         </div>
-                        <div className="col-span-2 text-zinc-700">{r.price}</div>
+                        <div className="col-span-2 text-zinc-300">{r.price}</div>
                         <div className="col-span-3 flex justify-end">
-                          <Pill tone={r.st === "UNLOCKED" ? "green" : r.st.includes("PAYMENT") ? "red" : "neutral"}>
-                            {r.st}
-                          </Pill>
+                          <Pill tone={r.st === "UNLOCKED" ? "green" : r.st.includes("PAYMENT") ? "red" : "neutral"}>{r.st}</Pill>
                         </div>
                       </div>
                     ))}
+                  </div>
+
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <button
+                      onClick={() => runCmd("call /api/premium-data")}
+                      className="rounded-2xl bg-red-600 px-4 py-3 text-xs font-extrabold text-white hover:bg-red-700"
+                      style={{ letterSpacing: "0.12em" }}
+                    >
+                      CALL /api/premium-data
+                    </button>
+                    <button
+                      onClick={() => setTab("docs")}
+                      className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-xs font-extrabold text-zinc-100 hover:bg-white/10"
+                      style={{ letterSpacing: "0.12em" }}
+                    >
+                      INTEGRATION
+                    </button>
                   </div>
                 </Panel>
               )}
 
               {tab === "depth" && (
                 <Panel title="DEPTH" right={<Pill tone="neutral">LIVE</Pill>}>
-                  <div className="rounded-2xl border border-zinc-200 bg-white p-4">
-                    <div className="flex items-center gap-2 rounded-2xl border border-zinc-200 bg-white px-3 py-2">
-                      <Icon d={I.search} className="text-red-600" />
-                      <div className="text-[11px] font-semibold text-zinc-600" style={{ letterSpacing: "0.10em" }}>
-                        Depth is driven by server telemetry intensity & shock
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                    <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-3 py-2">
+                      <Icon d={I.search} className="text-red-400" />
+                      <div className="text-[11px] font-semibold text-zinc-300" style={{ letterSpacing: "0.10em" }}>
+                        Depth driven by telemetry intensity & enforcement pressure
                       </div>
                     </div>
-                    <div className="mt-3 rounded-2xl border border-zinc-200 bg-zinc-950 p-4 font-mono text-[12px] text-zinc-100">
-                      intensity={tele?.intensity?.toFixed(3) ?? "—"} • shock={tele?.shock ?? "—"} • press Ctrl+L
+                    <div className="mt-3 rounded-2xl border border-white/10 bg-black p-4 font-mono text-[12px] text-zinc-200">
+                      intensity={tele?.intensity?.toFixed(3) ?? "—"} • shock={tele?.shock ?? "—"} • press Ctrl+L to trigger gated flow
                     </div>
                   </div>
                 </Panel>
@@ -855,13 +867,13 @@ export default function HomePage() {
 
               {tab === "pipeline" && (
                 <Panel title="PIPELINE" right={<Pill tone={statusTone}>{status?.statusText ?? "LOADING"}</Pill>}>
-                  <div className="rounded-2xl border border-zinc-200 bg-white p-4">
-                    <div className="text-sm font-extrabold text-zinc-900">Enforcement lifecycle</div>
-                    <div className="mt-2 text-sm text-zinc-700">
-                      Request → Edge Policy → Payment Required (if no valid receipt) → Receipt Verified → Session Issued → Route Unlock
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                    <div className="text-sm font-extrabold text-zinc-100">Enforcement lifecycle</div>
+                    <div className="mt-2 text-sm text-zinc-300">
+                      Request → Policy Gate → 402 (intent) → Payment → Receipt Verified → Session Issued → Route Unlocked
                     </div>
                     <div className="mt-4 grid grid-cols-4 gap-2">
-                      <Kv k="EDGE POLICY" v="ACTIVE" />
+                      <Kv k="POLICY" v="ACTIVE" />
                       <Kv k="INTENT TTL" v={status?.intentTtl ?? "90s"} />
                       <Kv k="SESSION TTL" v={status?.sessionTtl ?? "10m"} />
                       <Kv k="STATE" v={status?.statusText ?? "LOADING"} />
@@ -873,8 +885,8 @@ export default function HomePage() {
               {tab === "docs" && (
                 <Panel title="INTEGRATION" right={<Pill tone="neutral">READY</Pill>}>
                   <div className="grid gap-4 md:grid-cols-2">
-                    <div className="rounded-2xl border border-zinc-200 bg-white p-4">
-                      <div className="text-xs font-extrabold text-zinc-900" style={{ letterSpacing: "0.12em" }}>
+                    <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                      <div className="text-xs font-extrabold text-zinc-100" style={{ letterSpacing: "0.12em" }}>
                         SERVER CONTRACT
                       </div>
                       <DarkWell className="mt-3 p-3 font-mono text-[11px] leading-5">
@@ -890,13 +902,13 @@ export default function HomePage() {
                       </DarkWell>
                     </div>
 
-                    <div className="rounded-2xl border border-zinc-200 bg-white p-4">
-                      <div className="text-xs font-extrabold text-zinc-900" style={{ letterSpacing: "0.12em" }}>
-                        NEXT STEP
+                    <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                      <div className="text-xs font-extrabold text-zinc-100" style={{ letterSpacing: "0.12em" }}>
+                        NEXT STEP (REAL RECEIPTS)
                       </div>
-                      <div className="mt-3 text-sm text-zinc-700 leading-6">
-                        Swap the engine receipt verifier with your real Solana transaction verification. The UI stays unchanged — only
-                        server enforcement logic changes.
+                      <div className="mt-3 text-sm text-zinc-300 leading-6">
+                        Replace the server <span className="font-extrabold text-zinc-100">receipt verifier</span> with real Solana transaction verification.
+                        The UI stays unchanged — only enforcement logic is swapped.
                       </div>
                     </div>
                   </div>
@@ -907,9 +919,9 @@ export default function HomePage() {
             {/* Fills + Alerts */}
             <div className="mt-5 grid gap-5 lg:grid-cols-2">
               <Panel title="FILL TAPE" right={<Pill tone="neutral">T+0</Pill>}>
-                <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white">
+                <div className="overflow-hidden rounded-2xl border border-white/10 bg-black">
                   <div
-                    className="grid grid-cols-12 border-b border-zinc-200 bg-zinc-50 px-3 py-2 text-[11px] font-extrabold text-zinc-700"
+                    className="grid grid-cols-12 border-b border-white/10 bg-white/5 px-3 py-2 text-[11px] font-extrabold text-zinc-300"
                     style={{ letterSpacing: "0.12em" }}
                   >
                     <div className="col-span-2">TIME</div>
@@ -921,25 +933,25 @@ export default function HomePage() {
                   </div>
                   <div className="max-h-[320px] overflow-auto">
                     {fills.map((f) => (
-                      <div key={f.id} className="grid grid-cols-12 px-3 py-2 text-sm hover:bg-zinc-50">
-                        <div className="col-span-2 font-mono text-[12px] text-zinc-700">{f.t}</div>
+                      <div key={f.id} className="grid grid-cols-12 px-3 py-2 text-sm hover:bg-white/5">
+                        <div className="col-span-2 font-mono text-[12px] text-zinc-300">{f.t}</div>
                         <div className="col-span-2 font-extrabold">{f.sym}</div>
                         <div className="col-span-2">
                           <span
                             className={cn(
                               "rounded-xl border px-2 py-1 text-[11px] font-extrabold",
                               f.side === "BUY"
-                                ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-                                : "border-red-200 bg-red-50 text-red-800"
+                                ? "border-emerald-500/35 bg-emerald-500/10 text-emerald-200"
+                                : "border-red-500/35 bg-red-500/10 text-red-200"
                             )}
                             style={{ letterSpacing: "0.10em" }}
                           >
                             {f.side}
                           </span>
                         </div>
-                        <div className="col-span-2 font-mono text-[12px] text-zinc-700">{f.px.toFixed(4)}</div>
-                        <div className="col-span-2 text-zinc-700">{f.qty}</div>
-                        <div className="col-span-2 text-right font-mono text-[12px] text-zinc-600">{f.route}</div>
+                        <div className="col-span-2 font-mono text-[12px] text-zinc-300">{f.px.toFixed(4)}</div>
+                        <div className="col-span-2 text-zinc-300">{f.qty}</div>
+                        <div className="col-span-2 text-right font-mono text-[12px] text-zinc-400">{f.route}</div>
                       </div>
                     ))}
                   </div>
@@ -955,7 +967,7 @@ export default function HomePage() {
                   </button>
                   <button
                     onClick={() => runCmd("tick")}
-                    className="rounded-2xl border border-zinc-200 bg-white px-3 py-2 text-xs font-extrabold text-zinc-900 hover:bg-zinc-50"
+                    className="rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-extrabold text-zinc-100 hover:bg-white/10"
                     style={{ letterSpacing: "0.12em" }}
                   >
                     TICK
@@ -964,7 +976,7 @@ export default function HomePage() {
               </Panel>
 
               <Panel title="ALERTS" right={<Pill tone="neutral">QUEUE</Pill>}>
-                <div className="rounded-2xl border border-zinc-200 bg-white p-3">
+                <div className="rounded-2xl border border-white/10 bg-black p-3">
                   <div className="mt-2 max-h-[340px] overflow-auto">
                     {alerts.map((a) => (
                       <div
@@ -972,31 +984,31 @@ export default function HomePage() {
                         className={cn(
                           "mb-2 rounded-2xl border p-3 last:mb-0",
                           a.sev === "HIGH"
-                            ? "border-red-200 bg-red-50"
+                            ? "border-red-500/30 bg-red-500/10"
                             : a.sev === "MED"
-                            ? "border-amber-200 bg-amber-50"
-                            : "border-zinc-200 bg-white"
+                            ? "border-amber-500/30 bg-amber-500/10"
+                            : "border-white/10 bg-white/5"
                         )}
                       >
                         <div className="flex items-center justify-between">
-                          <div className="text-[10px] font-extrabold text-zinc-700" style={{ letterSpacing: "0.14em" }}>
+                          <div className="text-[10px] font-extrabold text-zinc-300" style={{ letterSpacing: "0.14em" }}>
                             {a.at}
                           </div>
                           <span
                             className={cn(
                               "rounded-full border px-2 py-1 text-[10px] font-extrabold",
                               a.sev === "HIGH"
-                                ? "border-red-200 bg-white text-red-700"
+                                ? "border-red-500/30 bg-black text-red-200"
                                 : a.sev === "MED"
-                                ? "border-amber-200 bg-white text-amber-700"
-                                : "border-zinc-200 bg-zinc-50 text-zinc-700"
+                                ? "border-amber-500/30 bg-black text-amber-200"
+                                : "border-white/10 bg-black text-zinc-200"
                             )}
                             style={{ letterSpacing: "0.12em" }}
                           >
                             {a.sev}
                           </span>
                         </div>
-                        <div className="mt-2 text-sm font-extrabold text-zinc-900">{a.msg}</div>
+                        <div className="mt-2 text-sm font-extrabold text-zinc-100">{a.msg}</div>
                       </div>
                     ))}
                   </div>
@@ -1012,7 +1024,7 @@ export default function HomePage() {
                   </button>
                   <button
                     onClick={() => runCmd("clear alerts")}
-                    className="rounded-2xl border border-zinc-200 bg-white px-3 py-2 text-xs font-extrabold text-zinc-900 hover:bg-zinc-50"
+                    className="rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-extrabold text-zinc-100 hover:bg-white/10"
                     style={{ letterSpacing: "0.12em" }}
                   >
                     CLEAR
@@ -1021,17 +1033,17 @@ export default function HomePage() {
               </Panel>
             </div>
 
-            <footer className="relative mt-10 flex flex-col gap-3 border-t border-zinc-200 pt-6 text-xs text-zinc-600 md:flex-row md:items-center md:justify-between">
-              <div>© {new Date().getFullYear()} HEXA — Solana x402 enforcement.</div>
+            <footer className="relative mt-10 flex flex-col gap-3 border-t border-white/10 pt-6 text-xs text-zinc-400 md:flex-row md:items-center md:justify-between">
+              <div>© {new Date().getFullYear()} HEXA — Solana x402 enforcement console.</div>
               <div className="flex items-center gap-3">
                 <span
-                  className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-[11px] font-extrabold text-zinc-800"
+                  className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[11px] font-extrabold text-zinc-200"
                   style={{ letterSpacing: "0.12em" }}
                 >
                   Ctrl+L execute
                 </span>
                 <span
-                  className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-[11px] font-extrabold text-zinc-800"
+                  className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[11px] font-extrabold text-zinc-200"
                   style={{ letterSpacing: "0.12em" }}
                 >
                   ` cmd bar
@@ -1044,14 +1056,14 @@ export default function HomePage() {
           <div className="lg:col-span-3">
             <div className="sticky top-6 grid gap-5">
               <Panel title="CHART • SOL" right={<Pill tone="neutral">{series?.symbol ?? "SOL"}</Pill>}>
-                <div className="rounded-2xl border border-zinc-200 bg-white p-2">
+                <div className="rounded-2xl border border-white/10 bg-black p-2">
                   <div className="mb-2 flex items-center justify-between px-2">
-                    <div className="text-[11px] font-extrabold text-zinc-900" style={{ letterSpacing: "0.14em" }}>
+                    <div className="text-[11px] font-extrabold text-zinc-100" style={{ letterSpacing: "0.14em" }}>
                       PRICE ACTION
                     </div>
-                    <div className="text-[11px] font-semibold text-zinc-600">
+                    <div className="text-[11px] font-semibold text-zinc-300">
                       last:{" "}
-                      <span className="font-extrabold text-zinc-900">
+                      <span className="font-extrabold text-zinc-100">
                         {series?.candles?.length ? series.candles[series.candles.length - 1].c.toFixed(3) : "—"}
                       </span>
                     </div>
@@ -1062,8 +1074,8 @@ export default function HomePage() {
                 </div>
 
                 <div className="mt-3 grid grid-cols-2 gap-2">
-                  <Kv k="INTENSITY" v={(tele?.intensity ?? 0).toFixed(2)} sub="vol proxy" />
-                  <Kv k="SHOCK" v={String(tele?.shock ?? "—")} sub="event pressure" />
+                  <Kv k="INTENSITY" v={(tele?.intensity ?? 0).toFixed(2)} sub="demand signal" />
+                  <Kv k="SHOCK" v={String(tele?.shock ?? "—")} sub="enforcement pressure" />
                 </div>
 
                 <div className="mt-3 flex gap-2">
@@ -1072,11 +1084,11 @@ export default function HomePage() {
                     className="flex-1 rounded-2xl bg-red-600 px-3 py-2 text-xs font-extrabold text-white hover:bg-red-700"
                     style={{ letterSpacing: "0.12em" }}
                   >
-                    PUMP FLOW
+                    EXECUTE CALL
                   </button>
                   <button
                     onClick={() => runCmd("probe")}
-                    className="rounded-2xl border border-zinc-200 bg-white px-3 py-2 text-xs font-extrabold text-zinc-900 hover:bg-zinc-50"
+                    className="rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-extrabold text-zinc-100 hover:bg-white/10"
                     style={{ letterSpacing: "0.12em" }}
                   >
                     PROBE
@@ -1085,20 +1097,19 @@ export default function HomePage() {
               </Panel>
 
               <Panel title="CHART • INTENSITY" right={<Pill tone="neutral">{tele?.intensity?.toFixed(2) ?? "—"}</Pill>}>
-                <div className="rounded-2xl border border-zinc-200 bg-white p-3">
+                <div className="rounded-2xl border border-white/10 bg-black p-3">
                   <Sparkline values={series?.intensity ?? []} height={70} />
-                  <div className="mt-2 text-[11px] font-semibold text-zinc-600">
-                    Engine volatility proxy. Spikes on <span className="font-extrabold text-zinc-900">CALL</span> and{" "}
-                    <span className="font-extrabold text-zinc-900">PROBE</span>.
+                  <div className="mt-2 text-[11px] font-semibold text-zinc-300">
+                    Demand signal derived from request volume and enforcement events.
                   </div>
                 </div>
               </Panel>
 
               <Panel title="CHART • SHOCK" right={<Pill tone="neutral">{tele?.shock ?? "—"}</Pill>}>
-                <div className="rounded-2xl border border-zinc-200 bg-white p-3">
+                <div className="rounded-2xl border border-white/10 bg-black p-3">
                   <Sparkline values={series?.shock ?? []} height={70} />
-                  <div className="mt-2 text-[11px] font-semibold text-zinc-600">
-                    Incrementing event pressure. Helps sell “this is alive”.
+                  <div className="mt-2 text-[11px] font-semibold text-zinc-300">
+                    Enforcement pressure index from 402 intents, unlocks, and policy changes.
                   </div>
                 </div>
               </Panel>
@@ -1109,16 +1120,16 @@ export default function HomePage() {
 
       {/* Bottom command bar */}
       {cmdOpen && (
-        <div className="fixed bottom-0 left-0 right-0 z-[95] border-t border-zinc-200 bg-white/90 backdrop-blur">
+        <div className="fixed bottom-0 left-0 right-0 z-[95] border-t border-white/10 bg-zinc-950/85 backdrop-blur">
           <div className="mx-auto max-w-[1750px] px-5 py-3">
             <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2 text-xs font-extrabold text-zinc-800" style={{ letterSpacing: "0.18em" }}>
-                <Icon d={I.terminal} className="text-red-600" />
+              <div className="flex items-center gap-2 text-xs font-extrabold text-zinc-200" style={{ letterSpacing: "0.18em" }}>
+                <Icon d={I.terminal} className="text-red-400" />
                 COMMAND LINE
               </div>
               <button
                 onClick={() => setCmdOpen(false)}
-                className="rounded-2xl border border-zinc-200 bg-white px-3 py-2 text-xs font-extrabold text-zinc-900 hover:bg-zinc-50"
+                className="rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-extrabold text-zinc-100 hover:bg-white/10"
                 style={{ letterSpacing: "0.12em" }}
               >
                 HIDE
@@ -1126,8 +1137,8 @@ export default function HomePage() {
             </div>
 
             <div className="mt-2">
-              <div className="flex items-center gap-2 rounded-2xl border border-zinc-200 bg-white px-3 py-3">
-                <span className="font-mono text-[12px] font-extrabold text-red-600">&gt;</span>
+              <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-black px-3 py-3">
+                <span className="font-mono text-[12px] font-extrabold text-red-400">&gt;</span>
                 <input
                   ref={cmdRef}
                   value={cmd}
@@ -1137,10 +1148,10 @@ export default function HomePage() {
                     if (e.key === "Escape") setCmd("");
                   }}
                   placeholder="call /api/premium-data | tick | risk | flatten | probe | clear logs"
-                  className="w-full bg-transparent font-mono text-[12px] font-semibold text-zinc-900 outline-none placeholder:text-zinc-400"
+                  className="w-full bg-transparent font-mono text-[12px] font-semibold text-zinc-100 outline-none placeholder:text-zinc-500"
                 />
-                <span className="h-4 w-px bg-zinc-200" />
-                <span className="font-mono text-[12px] text-zinc-500" style={{ animation: "cursorBlink 1s infinite" }}>
+                <span className="h-4 w-px bg-white/10" />
+                <span className="font-mono text-[12px] text-zinc-400" style={{ animation: "cursorBlink 1s infinite" }}>
                   █
                 </span>
                 <button
@@ -1151,9 +1162,9 @@ export default function HomePage() {
                   RUN
                 </button>
               </div>
-              <div className="mt-2 text-[11px] font-semibold text-zinc-600">
-                Tip: press <span className="font-extrabold text-zinc-900">Ctrl+L</span> for a forced gated call,{" "}
-                <span className="font-extrabold text-zinc-900">`</span> to toggle this bar.
+              <div className="mt-2 text-[11px] font-semibold text-zinc-400">
+                Tip: press <span className="font-extrabold text-zinc-200">Ctrl+L</span> to trigger a gated request,{" "}
+                <span className="font-extrabold text-zinc-200">`</span> to toggle this bar.
               </div>
             </div>
           </div>
@@ -1166,7 +1177,7 @@ export default function HomePage() {
             setCmdOpen(true);
             setTimeout(() => cmdRef.current?.focus(), 50);
           }}
-          className="fixed bottom-4 right-4 z-[95] rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-xs font-extrabold text-zinc-900 shadow-[0_25px_90px_rgba(0,0,0,0.14)] hover:bg-zinc-50"
+          className="fixed bottom-4 right-4 z-[95] rounded-2xl border border-white/10 bg-zinc-950/85 px-4 py-3 text-xs font-extrabold text-zinc-100 shadow-[0_25px_90px_rgba(0,0,0,0.65)] hover:bg-white/10"
           style={{ letterSpacing: "0.12em" }}
         >
           OPEN CMD BAR (`)
