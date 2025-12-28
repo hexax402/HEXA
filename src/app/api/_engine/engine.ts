@@ -1,6 +1,9 @@
-// Single in-memory engine shared across route handlers.
-// This makes the UI fully functional with real server state + commands.
-// Later: replace "verifyReceipt()" with real Solana receipt verification.
+// In-memory engine shared across route handlers.
+// Now reflects REAL enforcement by observing actual route responses,
+// rather than simulating READY → 402 → UNLOCKED.
+//
+// - /api/command will "call" a real API route and update engine state.
+// - /api/pay will log tx + mark UNLOCKED when session cookie is issued.
 
 export type State = "READY" | "PAYMENT_REQUIRED" | "UNLOCKED";
 
@@ -39,8 +42,8 @@ class Engine {
   telemetry: Telemetry = {
     latencyMs: 340,
     rps: 220,
-    unlocks: 58,
-    revenueK: 15.2,
+    unlocks: 0,
+    revenueK: 0,
     intensity: 0.46,
     shock: 1,
   };
@@ -84,7 +87,7 @@ class Engine {
 
     this.positions = this.positions.map((p) => {
       const dir = Math.random() > 0.5 ? 1 : -1;
-      const drift = (Math.random() * vol) * dir;
+      const drift = Math.random() * vol * dir;
       const mark = Math.max(0.000001, +(p.mark * (1 + drift)).toFixed(4));
       const uPnL =
         p.side === "LONG"
@@ -105,12 +108,45 @@ class Engine {
     this.reprice(kind);
   }
 
-  /** Launch-ready behavior:
-   * - READY: first call may return PAYMENT_REQUIRED (policy)
-   * - PAYMENT_REQUIRED: next call verifies receipt and unlocks
-   * - UNLOCKED: subsequent calls succeed until TTL expiry (simulated reset)
-   */
-  call(route = this.route) {
+  /** Realistic UI updates based on actual HTTP result */
+  observeRouteResult(opts: { route: string; httpStatus: number; note?: string }) {
+    const { route, httpStatus, note } = opts;
+
+    if (httpStatus === 402) {
+      this.state = "PAYMENT_REQUIRED";
+      this.pushLog(`route: ${route} → 402 PAYMENT REQUIRED`);
+      this.pushLog(`intent: amount=${this.price} ttl=${this.intentTtl}`);
+      this.addAlert("HIGH", "Payment required — route is enforced");
+      return;
+    }
+
+    if (httpStatus >= 200 && httpStatus < 300) {
+      this.state = "UNLOCKED";
+      this.telemetry.unlocks += 1;
+      this.pushLog(`route: ${route} → ${httpStatus} OK (session valid)`);
+      if (note) this.pushLog(note);
+      this.addAlert("MED", "Session active — premium route unlocked");
+      return;
+    }
+
+    // other errors
+    this.pushLog(`route: ${route} → ${httpStatus} ERROR`);
+    if (note) this.pushLog(note);
+    this.addAlert("MED", `Route error — ${httpStatus}`);
+  }
+
+  /** Called by /api/pay on successful verification */
+  onPaymentVerified(payload: { tx: string; paidLamports: number; exp: number }) {
+    this.state = "UNLOCKED";
+    this.telemetry.unlocks += 1;
+    this.telemetry.revenueK = +(this.telemetry.revenueK + 0.1).toFixed(1); // cosmetic
+    this.pushLog(`chain: payment verified tx=${payload.tx.slice(0, 10)}…`);
+    this.pushLog(`session: issued ttl=${this.sessionTtl}`);
+    this.addAlert("MED", "Receipt verified — session issued");
+  }
+
+  /** "call" now just produces a fill + telemetry jitter. The real call happens in /api/command via fetch(). */
+  synthCall(route = this.route) {
     const sym = ["SOL", "JTO", "WIF", "PYTH"][Math.floor(Math.random() * 4)];
     const side: "BUY" | "SELL" = Math.random() > 0.5 ? "BUY" : "SELL";
     const px =
@@ -122,32 +158,7 @@ class Engine {
     const qty = sym === "SOL" ? Math.round(10 + Math.random() * 80) : Math.round(200 + Math.random() * 2600);
 
     this.addFill({ t: tsNow(), sym, side, px: +px.toFixed(4), qty, route });
-
     this.jitter("call");
-
-    if (this.state === "READY") {
-      this.state = "PAYMENT_REQUIRED";
-      this.pushLog(`route: ${route} → 402 emitted (payment required)`);
-      this.pushLog(`intent: amount=${this.price} ttl=${this.intentTtl}`);
-      this.addAlert("HIGH", "Payment required — intent issued for enforced route");
-      return;
-    }
-
-    if (this.state === "PAYMENT_REQUIRED") {
-      this.state = "UNLOCKED";
-      this.telemetry.unlocks += 1;
-      this.pushLog("chain: receipt verified → session issued");
-      this.addAlert("MED", "Receipt verified — session active");
-      return;
-    }
-
-    // UNLOCKED: keep running, occasionally reset to READY to mimic TTL expiry
-    this.pushLog(`route: ${route} → 200 OK (session active)`);
-    if (Math.random() > 0.80) {
-      this.state = "READY";
-      this.pushLog("session: ttl expired → enforcement ready");
-      this.addAlert("LOW", "Session window closed — enforcement re-armed");
-    }
   }
 
   tick() {

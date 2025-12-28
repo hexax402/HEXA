@@ -283,6 +283,57 @@ export default function HomePage() {
   const [alerts, setAlerts] = useState<Array<{ id: string; sev: "LOW" | "MED" | "HIGH"; msg: string; at: string }>>([]);
   const [series, setSeries] = useState<Series | null>(null);
 
+  // seed chart once
+  useEffect(() => {
+    setSeries((s) => {
+      if (s?.candles?.length) return s;
+
+      const candles = Array.from({ length: 60 }).map((_, i) => {
+        const base = 180;
+        const t = Date.now() - (60 - i) * 60_000;
+        const o = base + Math.sin(i / 3) * 2;
+        const c = o + (Math.random() - 0.5) * 3;
+        const h = Math.max(o, c) + Math.random() * 2;
+        const l = Math.min(o, c) - Math.random() * 2;
+
+        return { t, o, h, l, c };
+      });
+
+      return { symbol: "SOL", candles, intensity: [], shock: [] };
+    });
+  }, []);
+
+  // animate candles
+  useEffect(() => {
+    const id = setInterval(() => {
+      setSeries((s) => {
+        if (!s?.candles?.length) return s;
+
+        const last = s.candles[s.candles.length - 1];
+        const o = last.c;
+        const c = o + (Math.random() - 0.5) * 2;
+        const h = Math.max(o, c) + Math.random();
+        const l = Math.min(o, c) - Math.random();
+
+        return {
+          ...s,
+          candles: [
+            ...s.candles.slice(-59),
+            {
+              t: Date.now(),
+              o,
+              h,
+              l,
+              c,
+            },
+          ],
+        };
+      });
+    }, 1200);
+
+    return () => clearInterval(id);
+  }, []);
+
   // UI
   const [copied, setCopied] = useState(false);
   const [cmd, setCmd] = useState("");
@@ -354,9 +405,13 @@ export default function HomePage() {
 
   const oneLiner = useMemo(
     () =>
-      `Hades x402 — Paywalled APIs with on-chain enforcement\n\n• Deterministic 402 → Pay → Unlock\n• Receipt verification + TTL sessions\n• Edge enforcement + audit-friendly logs\n• Operator-grade console UI`,
+      `HEXA — Paywalled APIs with on-chain enforcement\n\n• Deterministic 402 → Pay → Unlock\n• Receipt verification + TTL sessions\n• Edge enforcement + audit-friendly logs\n• Operator-grade console UI`,
     []
   );
+
+  // ✅ UPDATE THESE LINKS
+  const X_URL = "https://x.com/Hexax402";
+  const GITHUB_URL = "https://github.com/Hexax402/HEXA"; // <-- change to your public repo once you create it
 
   async function copyText() {
     try {
@@ -433,7 +488,7 @@ export default function HomePage() {
                   SOLANA x402 ENFORCEMENT
                 </div>
                 <div className="text-xs font-extrabold text-zinc-900" style={{ letterSpacing: "0.18em" }}>
-                  HADES PROTOCOL
+                  HEXA
                 </div>
               </div>
             </div>
@@ -461,7 +516,7 @@ export default function HomePage() {
 
           <div className="flex items-center gap-2">
             <a
-              href="https://x.com/LatchProtocol"
+              href={X_URL}
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs font-extrabold text-zinc-900 hover:bg-zinc-50"
@@ -470,7 +525,7 @@ export default function HomePage() {
               X <Icon d={I.arrow} className="text-zinc-700" />
             </a>
             <a
-              href="https://github.com/latchprotocol/latch-protocol"
+              href={GITHUB_URL}
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs font-extrabold text-zinc-900 hover:bg-zinc-50"
@@ -608,14 +663,10 @@ export default function HomePage() {
                   </div>
 
                   <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4">
+                    <Kv k="PRODUCT" v="HEXA" sub="x402 enforcement" />
                     <Kv k="CHAIN" v="SOLANA" sub="receipt verification" />
                     <Kv k="EDGE" v="ENFORCED" sub="policy active" />
-                    <Kv k="INTENT" v="SIGNED" sub="payment intent" />
                     <Kv k="SESSION" v="TTL" sub="unlock window" />
-                    <Kv k="ROUTE" v={status?.route ?? "/api/premium-data"} sub="primary" />
-                    <Kv k="PRICE" v={status?.price ?? "0.01 SOL"} sub="per window" />
-                    <Kv k="INTENT TTL" v={status?.intentTtl ?? "90s"} sub="quote" />
-                    <Kv k="SESSION TTL" v={status?.sessionTtl ?? "10m"} sub="unlock" />
                   </div>
                 </div>
 
@@ -783,23 +834,6 @@ export default function HomePage() {
                       </div>
                     ))}
                   </div>
-
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    <button
-                      onClick={() => runCmd("call /api/premium-data")}
-                      className="rounded-2xl bg-red-600 px-4 py-3 text-xs font-extrabold text-white hover:bg-red-700"
-                      style={{ letterSpacing: "0.12em" }}
-                    >
-                      CALL /api/premium-data
-                    </button>
-                    <button
-                      onClick={() => setTab("docs")}
-                      className="rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-xs font-extrabold text-zinc-900 hover:bg-zinc-50"
-                      style={{ letterSpacing: "0.12em" }}
-                    >
-                      INTEGRATION
-                    </button>
-                  </div>
                 </Panel>
               )}
 
@@ -813,7 +847,7 @@ export default function HomePage() {
                       </div>
                     </div>
                     <div className="mt-3 rounded-2xl border border-zinc-200 bg-zinc-950 p-4 font-mono text-[12px] text-zinc-100">
-                      intensity={tele?.intensity?.toFixed(3) ?? "—"} • shock={tele?.shock ?? "—"} • press Ctrl+L to generate on-chain gated flow
+                      intensity={tele?.intensity?.toFixed(3) ?? "—"} • shock={tele?.shock ?? "—"} • press Ctrl+L
                     </div>
                   </div>
                 </Panel>
@@ -858,11 +892,11 @@ export default function HomePage() {
 
                     <div className="rounded-2xl border border-zinc-200 bg-white p-4">
                       <div className="text-xs font-extrabold text-zinc-900" style={{ letterSpacing: "0.12em" }}>
-                        NEXT STEP (REAL RECEIPTS)
+                        NEXT STEP
                       </div>
                       <div className="mt-3 text-sm text-zinc-700 leading-6">
-                        Replace the engine’s <span className="font-extrabold">receipt verifier</span> with your real Solana receipt check.
-                        The UI stays unchanged — only the server enforcement logic is swapped.
+                        Swap the engine receipt verifier with your real Solana transaction verification. The UI stays unchanged — only
+                        server enforcement logic changes.
                       </div>
                     </div>
                   </div>
@@ -988,7 +1022,7 @@ export default function HomePage() {
             </div>
 
             <footer className="relative mt-10 flex flex-col gap-3 border-t border-zinc-200 pt-6 text-xs text-zinc-600 md:flex-row md:items-center md:justify-between">
-              <div>© {new Date().getFullYear()} Hades Protocol — x402 enforcement console.</div>
+              <div>© {new Date().getFullYear()} HEXA — Solana x402 enforcement.</div>
               <div className="flex items-center gap-3">
                 <span
                   className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-[11px] font-extrabold text-zinc-800"
